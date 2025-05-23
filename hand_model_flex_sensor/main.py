@@ -8,11 +8,12 @@ from scelet import hand_structure
 from flex_sensor_hand import FlexSensorHand
 from leacky_relu import MLP
 
+
 def mirror_hand_structure(hand_struct):
     left_hand = copy.deepcopy(hand_struct)
 
     def mirror_node(node):
-        #Инвертирование координаты по оси x
+        # Инвертирование координаты по оси x
         node["pos"][0] = -node["pos"][0]
 
         # Инвертирование оси y
@@ -26,6 +27,7 @@ def mirror_hand_structure(hand_struct):
 
     mirror_node(left_hand["wrist"])
     return left_hand
+
 
 def generate_hand_movements_with_sensor_effects():
     movements = []
@@ -162,6 +164,7 @@ def generate_hand_movements_with_sensor_effects():
 
     return movements
 
+
 def prepare_training_data(angles_dict):
     joint_names = list(angles_dict.keys())
     angles_data = list(zip(*[angles_dict[joint] for joint in joint_names]))
@@ -191,7 +194,8 @@ def prepare_training_data(angles_dict):
 
     return np.array(X), np.array(y)
 
-def create_animation(filename="hand_mirroring_with_sensor_effects.gif"):
+
+def create_animation(output_size=None, filename="hand_mirroring_with_sensor_effects.gif"):
     # Создаем два подграфика
     fig = plt.figure(figsize=(14, 8))
 
@@ -234,6 +238,27 @@ def create_animation(filename="hand_mirroring_with_sensor_effects.gif"):
     X_train_std[X_train_std == 0] = 1  # Избегаем деления на ноль
     X_train_normalized = (X_train - X_train_mean) / X_train_std
 
+    # Если output_size задан вручную, используем его
+    if output_size is not None:
+        print(f"Используем пользовательский размер выходного слоя: {output_size}")
+
+        # Адаптируем y_train и y_test к новому размеру
+        if output_size < y_train.shape[1]:
+            # Если размер меньше, берем только первые output_size элементов
+            y_train = y_train[:, :output_size]
+            y_test = y_test[:, :output_size]
+            print(f"Размер выходных данных уменьшен с {y.shape[1]} до {output_size}")
+        elif output_size > y_train.shape[1]:
+            # Если размер больше, дополняем нулями
+            y_train_expanded = np.zeros((y_train.shape[0], output_size))
+            y_train_expanded[:, :y_train.shape[1]] = y_train
+            y_train = y_train_expanded
+
+            y_test_expanded = np.zeros((y_test.shape[0], output_size))
+            y_test_expanded[:, :y_test.shape[1]] = y_test
+            y_test = y_test_expanded
+            print(f"Размер выходных данных увеличен с {y.shape[1]} до {output_size}")
+
     y_train_mean, y_train_std = np.mean(y_train, axis=0), np.std(y_train, axis=0)
     y_train_std[y_train_std == 0] = 1  # Избегаем деления на ноль
     y_train_normalized = (y_train - y_train_mean) / y_train_std
@@ -245,8 +270,8 @@ def create_animation(filename="hand_mirroring_with_sensor_effects.gif"):
     # Задаем параметры многослойного перцептрона
     mlp = MLP(
         input_size=X_train.shape[1],
-        hidden_sizes=[5],
-        output_size=y_train.shape[1],
+        hidden_sizes=[38,5,28],
+        output_size=y_train.shape[1],  # Используем размер адаптированных данных
         alpha=0.01
     )
 
@@ -361,19 +386,21 @@ def create_animation(filename="hand_mirroring_with_sensor_effects.gif"):
     print(f"Сохраняем анимацию в {filename}...")
     anim.save(filename, writer='pillow', fps=10)
 
-    # Показываем итоговые метрики
-    print("\nИтоговые метрики:")
-    print(f"Ошибка на обучающей выборке (MSE): {train_losses[-1]:.6f}")
-    print(f"Ошибка на тестовой выборке (MSE): {val_losses[-1]:.6f}")
 
     return mlp, train_losses, val_losses
+
+
 def main():
     print("Starting hand mirroring simulation with MLP using Leaky ReLU activation...")
 
+    # Задаем размер выходного слоя вручную (можно изменить по необходимости)
+    custom_output_size = 14  # Пример размера выходного слоя
+
+    print(f"Используем размер выходного слоя: {custom_output_size}")
     print("Генерация данных...")
 
-    # Создание и обучение модели
-    mlp, train_losses, val_losses = create_animation()
+    # Создание и обучение модели с указанным размером выходного слоя
+    mlp, train_losses, val_losses = create_animation(output_size=custom_output_size)
 
     print("Завершение!")
 
@@ -435,6 +462,7 @@ def main():
             writer.writerow([i, train_losses[i], val_losses[i]])
 
     print("Результаты обучения сохранены в training_results_leaky_relu.csv")
+
 
 if __name__ == "__main__":
     main()
