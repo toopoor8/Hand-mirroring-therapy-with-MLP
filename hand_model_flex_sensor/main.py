@@ -137,7 +137,28 @@ def generate_hand_movements_with_sensor_effects():
             "pinky": R_min
         })
 
-    # 4. Сгибание среднего пальца к большому
+    # 4. Жест "Вилка"
+    for i in range(R_min, R_max + 1, 2000):
+        step = max(min((i - R_min), R_max - R_min), 0)
+        movements.append({
+            "thumb": apply_sensor_effects(R_min + step, True),
+            "index": R_min,
+            "middle": R_min,
+            "ring": R_min,
+            "pinky": apply_sensor_effects(R_min + step, True)
+        })
+
+    for i in range(R_max, R_min - 1, -2000):
+        step = max(min((i - R_min), R_max - R_min), 0)
+        movements.append({
+            "thumb": apply_sensor_effects(R_min + step, False),
+            "index": R_min,
+            "middle": R_min,
+            "ring": R_min,
+            "pinky": apply_sensor_effects(R_min + step, False)
+        })
+
+    # 5. Сгибание среднего пальца к большому
     for i in range(R_min, R_max + 1, 2000):
         middle_step = max(min((i - R_min), 75950), 0)  # Средний до 100950
         thumb_step = max(min((i - R_min) * 0.7, 70000), 0)  # Большой до 95000
@@ -163,7 +184,6 @@ def generate_hand_movements_with_sensor_effects():
         })
 
     return movements
-
 
 def prepare_training_data(angles_dict):
     joint_names = list(angles_dict.keys())
@@ -371,10 +391,10 @@ def create_animation(output_size=None, filename="hand_mirroring_with_sensor_effe
         elif i < frame_count * 3:
             gesture_name = "'Коза'"
         elif i < frame_count * 4:
-            gesture_name = "Сгибание среднего к большому"
+            gesture_name = "'Вилка'"
         else:
             gesture_name = "Сгибание среднего к большому"
-
+            
         plt.figtext(0.5, 0.35, f"Текущий жест: {gesture_name}", ha='center', fontsize=16)
 
         return ax_left, ax_right
